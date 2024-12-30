@@ -6,7 +6,7 @@ import os
 from pynput import keyboard
 
 # Constante que armazena o total de pontos
-TOTAL_POINTS = 11600
+TOTAL_POINTS = 10600
 
 # Variável que armazena dados do jogador
 player = ""

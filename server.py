@@ -27,22 +27,23 @@ for i in range(MAIN_MAP_SIZE):
     game_main_map[i][0] = WALL
     game_main_map[i][15] = WALL
     
-treasure_rooms = [2]
+treasure_rooms = []
 
 id =1
-for treasure_room in treasure_rooms:
+for treasure_room in range(2):
     treasure_room = {"room_id" : id, "room": [[EMPTY for _ in range(TREASURE_ROOM_SIZE)] for _ in range(TREASURE_ROOM_SIZE)], "position": [0,0]}
     for i in range(TREASURE_ROOM_SIZE):
         treasure_room.get("room")[0][i] = WALL
         treasure_room.get("room")[7][i] = WALL
         treasure_room.get("room")[i][0] = WALL
         treasure_room.get("room")[i][7] = WALL
+    treasure_rooms.append(treasure_room)
     id += 1
 
 
 clients = [] # Lista que armazena os clientes conectados
 
-remaining_treasures = 116 # Variável que armazena a quantidade de tesouros restantes
+remaining_treasures = 90 # Variável que armazena a quantidade de tesouros restantes
 
 # Função que define a posição dos jogadores
 def set_player_position():
@@ -72,22 +73,27 @@ def set_portal_position():
         y = random.randint(1, 14)
         if game_main_map[x][y] == EMPTY:
             game_main_map[x][y] = PORTAL
-            treasure_rooms[portals].get("position") = [x,y]
+            treasure_rooms[portals]["position"] = [x, y]
             portals += 1
 
 # Função que define a posição do tesouros nas salas de tesouros
 def set_treasure_room_treasures_position():
     for treasure_room in treasure_rooms:
         treasures = 0
-        while treasures < 20:
+        while treasures < 35:
             x = random.randint(1, 6)
             y = random.randint(1, 6)
-            if treasure_room.get("room")[x][y] == EMPTY or (x != 1 and y != 1):
-                if treasures == 8 or treasures == 16:
-                    treasure_room.get("room")[x][y] = GREAT_TREASURE
+            if treasure_room.get("room")[x][y] == EMPTY:
+                if x == 1 and y == 1:
+                    pass
                 else:
-                    treasure_room.get("room")[x][y] = TREASURE
-                    treasures += 1
+                    if treasures == 10 or treasures == 24:
+                        treasure_room.get("room")[x][y] = GREAT_TREASURE
+                        treasures += 1
+                    else:
+                        treasure_room.get("room")[x][y] = TREASURE
+                        treasures += 1
+                    print("TREASURES", treasures, "→", x, y)
     
 # Função que monitora as requisições de movimento
 def monitoring_requests(clients):
@@ -113,192 +119,102 @@ def evaluate_move_request(client, message):
     print(f"{client.get("name")} → {message}")
     
     if "UP" in message:
-        if client.get("map_state") == "main":
-            if game_main_map[client.get("position")[0] - 1][client.get("position")[1]] == EMPTY:
-                move_player(client, -1, 0)
-            elif game_main_map[client.get("position")[0] - 1][client.get("position")[1]] == TREASURE:
-                move_player(client, -1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif game_main_map[client.get("position")[0] - 1][client.get("position")[1]] == PORTAL:
-                move_player(client, -1, 0)
-                print(f"{client.get("name")} → Entrou no Portal")
-                goto_treasure_room(client, client.get("position")[0] - 1, client.get("position")[1])
-        elif client.get("map_state") == "1":
-            if treasure_rooms[0].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == EMPTY:
-                move_player(client, -1, 0)
-            elif treasure_rooms[0].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == TREASURE:
-                move_player(client, -1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[0].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == GREAT_TREASURE:
-                move_player(client, -1, 0)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-        elif client.get("map_state") == "2":
-            if treasure_rooms[1].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == EMPTY:
-                move_player(client, -1, 0)
-            elif treasure_rooms[0].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == TREASURE:
-                move_player(client, -1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[1].get("room")[client.get("position")[0] - 1][client.get("position")[1]] == GREAT_TREASURE:
-                move_player(client, -1, 0)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
+        if client.get("current_map")[client.get("position")[0] - 1][client.get("position")[1]] == EMPTY:
+            move_player(client, -1, 0)
+        elif client.get("current_map")[client.get("position")[0] - 1][client.get("position")[1]] == TREASURE:
+            move_player(client, -1, 0)
+            remaining_treasures -= 1
+            client["score"] += 100
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        elif client.get("current_map")[client.get("position")[0] - 1][client.get("position")[1]] == PORTAL:
+            move_player_to_portal(client, -1, 0)
+            print(f"{client.get("name")} → Entrou no Portal")
+            goto_treasure_room(client, client.get("position")[0] - 1, client.get("position")[1])
+        elif client.get("current_map")[client.get("position")[0] - 1][client.get("position")[1]] == GREAT_TREASURE:
+            move_player(client, -1, 0)
+            remaining_treasures -= 1
+            client["score"] += 500
+            print(f"{client.get("name")} → {client.get("score")} pontos")
             
     if "DOWN" in message:
-        if client.get("map_state") == "main":
-            if game_main_map[client.get("position")[0] + 1][client.get("position")[1]] == EMPTY:
-                move_player(client, 1, 0)
-            elif game_main_map[client.get("position")[0] + 1][client.get("position")[1]] == TREASURE:
-                move_player(client, 1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif game_main_map[client.get("position")[0] + 1][client.get("position")[1]] == PORTAL:
-                move_player(client, 1, 0)
-                print(f"{client.get("name")} → Entrou no Portal")
-                goto_treasure_room(client, client.get("position")[0] + 1, client.get("position")[1])
-        elif client.get("map_state") == "1":
-            if treasure_rooms[0].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == EMPTY:
-                move_player(client, 1, 0)
-            elif treasure_rooms[0].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == TREASURE:
-                move_player(client, 1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[0].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == GREAT_TREASURE:
-                move_player(client, 1, 0)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-        elif client.get("map_state") == "2":
-            if treasure_rooms[1].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == EMPTY:
-                move_player(client, 1, 0)
-            elif treasure_rooms[0].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == TREASURE:
-                move_player(client, 1, 0)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[1].get("room")[client.get("position")[0] + 1][client.get("position")[1]] == GREAT_TREASURE:
-                move_player(client, 1, 0)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
+        if client.get("current_map")[client.get("position")[0] + 1][client.get("position")[1]] == EMPTY:
+            move_player(client, 1, 0)
+        elif client.get("current_map")[client.get("position")[0] + 1][client.get("position")[1]] == TREASURE:
+            move_player(client, 1, 0)
+            remaining_treasures -= 1
+            client["score"] += 100
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        elif client.get("current_map")[client.get("position")[0] + 1][client.get("position")[1]] == PORTAL:
+            move_player_to_portal(client, 1, 0)
+            print(f"{client.get("name")} → Entrou no Portal")
+            goto_treasure_room(client, client.get("position")[0] + 1, client.get("position")[1])
+        elif client.get("current_map")[client.get("position")[0] + 1][client.get("position")[1]] == GREAT_TREASURE:
+            move_player(client, 1, 0)
+            remaining_treasures -= 1
+            client["score"] += 500
+            print(f"{client.get("name")} → {client.get("score")} pontos")
             
     if "LEFT" in message:
-        if client.get("map_state") == "main":
-            if game_main_map[client.get("position")[0]][client.get("position")[1] - 1] == EMPTY:
-                move_player(client, 0, -1)
-            elif game_main_map[client.get("position")[0]][client.get("position")[1] - 1] == TREASURE:
-                move_player(client, 0, -1)
-                remaining_treasures -= 1
-                client["score"] += 100 
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif game_main_map[client.get("position")[0]][client.get("position")[1] - 1] == PORTAL:
-                move_player(client, 0, -1)
-                print(f"{client.get("name")} → Entrou no Portal")
-                goto_treasure_room(client, client.get("position")[0], client.get("position")[1] - 1)
-        elif client.get("map_state") == "1":
-            if treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == EMPTY:
-                move_player(client, 0, -1)
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == TREASURE:
-                move_player(client, 0, -1)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == GREAT_TREASURE:
-                move_player(client, 0, -1)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-        elif client.get("map_state") == "2":
-            if treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == EMPTY:
-                move_player(client, 0, -1)
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == TREASURE:
-                move_player(client, 0, -1)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1] - 1] == GREAT_TREASURE:
-                move_player(client, 0, -1)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-              
+        if client.get("current_map")[client.get("position")[0]][client.get("position")[1] - 1] == EMPTY:
+            move_player(client, 0, -1)
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] - 1] == TREASURE:
+            move_player(client, 0, -1)
+            remaining_treasures -= 1
+            client["score"] += 100 
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] - 1] == PORTAL:
+            move_player_to_portal(client, 0, -1)
+            print(f"{client.get("name")} → Entrou no Portal")
+            goto_treasure_room(client, client.get("position")[0], client.get("position")[1] - 1)
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] - 1] == GREAT_TREASURE:
+            move_player(client, 0, -1)
+            remaining_treasures -= 1
+            client["score"] += 500
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        
     if "RIGHT" in message:
-        if client.get("map_state") == "main":
-            if game_main_map[client.get("position")[0]][client.get("position")[1] + 1] == EMPTY:
-                move_player(client, 0, 1)
-            elif game_main_map[client.get("position")[0]][client.get("position")[1] + 1] == TREASURE:
-                move_player(client, 0, 1)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif game_main_map[client.get("position")[0]][client.get("position")[1] + 1] == PORTAL:
-                move_player(client, 0, 1)
-                print(f"{client.get("name")} → Entrou no Portal")
-                goto_treasure_room(client, client.get("position")[0], client.get("position")[1] + 1)
-        elif client.get("map_state") == "1":
-            if treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == EMPTY:
-                move_player(client, 0, 1)
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == TREASURE:
-                move_player(client, 0, 1)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == GREAT_TREASURE:
-                move_player(client, 0, 1)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-        elif client.get("map_state") == "2":
-            if treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == EMPTY:
-                move_player(client, 0, 1)
-            elif treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == TREASURE:
-                move_player(client, 0, 1)
-                remaining_treasures -= 1
-                client["score"] += 100
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-            elif treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1] + 1] == GREAT_TREASURE:
-                move_player(client, 0, 1)
-                remaining_treasures -= 1
-                client["score"] += 500
-                print(f"{client.get("name")} → {client.get("score")} pontos")
-
+        if client.get("current_map")[client.get("position")[0]][client.get("position")[1] + 1] == EMPTY:
+            move_player(client, 0, 1)
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] + 1] == TREASURE:
+            move_player(client, 0, 1)
+            remaining_treasures -= 1
+            client["score"] += 100
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] + 1] == PORTAL:
+            move_player_to_portal(client, 0, 1)
+            print(f"{client.get("name")} → Entrou no Portal")
+            goto_treasure_room(client, client.get("position")[0], client.get("position")[1] + 1)
+        elif client.get("current_map")[client.get("position")[0]][client.get("position")[1] + 1] == GREAT_TREASURE:
+            move_player(client, 0, 1)
+            remaining_treasures -= 1
+            client["score"] += 500
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+        
 # Função que move o jogador
 def move_player(client, x, y):
-    if client.get("map_state") == "main":
-        game_main_map[client.get("position")[0]][client.get("position")[1]] = EMPTY
-        client["position"][0] += x
-        client["position"][1] += y
-        game_main_map[client.get("position")[0]][client.get("position")[1]] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
-    elif client.get("map_state") == "1":
-        treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1]] = EMPTY
-        client["position"][0] += x
-        client["position"][1] += y
-        treasure_rooms[0].get("room")[client.get("position")[0]][client.get("position")[1]] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
-    elif client.get("map_state") == "2":
-        treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1]] = EMPTY
-        client["position"][0] += x
-        client["position"][1] += y
-        treasure_rooms[1].get("room")[client.get("position")[0]][client.get("position")[1]] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+    client.get("current_map")[client.get("position")[0]][client.get("position")[1]] = EMPTY
+    client["position"][0] += x
+    client["position"][1] += y
+    client.get("current_map")[client.get("position")[0]][client.get("position")[1]] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+
+
+def move_player_to_portal(client, x, y):
+    game_main_map[client.get("position")[0]][client.get("position")[1]] = EMPTY
+    
 
 # Função que coloca jogador na fila da sala do tesouro
 def goto_treasure_room(client, x, y):
     print("Foi para a sala de tesouros")
+    client.update({"position": [1,1]})
     if x == treasure_rooms[0].get("position")[0] and y == treasure_rooms[0].get("position")[1]:
-        client.get("map_state") == "1"
+        client.update({"map_state" : "1"})
+        client.update({"current_map" : treasure_rooms[0].get("room")})
         treasure_rooms[0].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2          
     if x == treasure_rooms[1].get("position")[0] and y == treasure_rooms[1].get("position")[1]:
-        client.get("map_state") == "2"
+        client.update({"map_state" : "2"})
+        client.update({"current_map" : treasure_rooms[1].get("room")})
         treasure_rooms[1].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2 
+    print("MAP STATE:", client.get("current_map"))
 
 # Função que define o vencedor
 def set_winner():
@@ -338,7 +254,7 @@ def start_server():
     # Aguarda a conexão de dois clientes
     while len(clients) < 2:
         conn, addr = server_socket.accept()
-        player = {"name": "Player " + str(len(clients) + 1), "id": len(clients) + 1, "connection": conn, "position": [0, 0], "score": 0, "map_state": "main"}		
+        player = {"name": "Player " + str(len(clients) + 1), "id": len(clients) + 1, "connection": conn, "position": [0, 0], "score": 0, "current_map": game_main_map, "map_state": "main"}		
         clients.append(player)
         print("Conectado com:", addr,"\nPlayer:", player.get("name"))
     
@@ -371,7 +287,7 @@ def start_server():
     while remaining_treasures >= 0:
         game_map_str = json.dumps(game_main_map)
         game_room1_str = json.dumps(treasure_rooms[0].get("room"))
-        game_room2_str = json.dumps(treasure_rooms[0].get("room"))
+        game_room2_str = json.dumps(treasure_rooms[1].get("room"))
         for client in clients:
             if client.get("map_state") == "main":
                 client.get("connection").send(game_map_str.encode())
