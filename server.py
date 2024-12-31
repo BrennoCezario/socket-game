@@ -31,7 +31,7 @@ treasure_rooms = []
 
 id =1
 for treasure_room in range(2):
-    treasure_room = {"room_id" : id, "room": [[EMPTY for _ in range(TREASURE_ROOM_SIZE)] for _ in range(TREASURE_ROOM_SIZE)], "position": [0,0]}
+    treasure_room = {"room_id" : id, "room": [[EMPTY for _ in range(TREASURE_ROOM_SIZE)] for _ in range(TREASURE_ROOM_SIZE)], "position": [0,0], "stopwatch":0}
     for i in range(TREASURE_ROOM_SIZE):
         treasure_room.get("room")[0][i] = WALL
         treasure_room.get("room")[7][i] = WALL
@@ -40,6 +40,7 @@ for treasure_room in range(2):
     treasure_rooms.append(treasure_room)
     id += 1
 
+treasure_room_semaphores = [threading.Semaphore(1) for _ in range(len(treasure_rooms))]
 
 clients = [] # Lista que armazena os clientes conectados
 
@@ -204,17 +205,52 @@ def move_player_to_portal(client, x, y):
 
 # Função que coloca jogador na fila da sala do tesouro
 def goto_treasure_room(client, x, y):
-    print("Foi para a sala de tesouros")
-    client.update({"position": [1,1]})
     if x == treasure_rooms[0].get("position")[0] and y == treasure_rooms[0].get("position")[1]:
-        client.update({"map_state" : "1"})
-        client.update({"current_map" : treasure_rooms[0].get("room")})
-        treasure_rooms[0].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2          
+        acquired = treasure_room_semaphores[0].acquire(blocking=False)
+        if acquired:
+                print(f"{client.get('name')} entrou na sala do tesouro {i + 1}")
+                client.update({"position": [1, 1], "current_map": treasure_rooms[0].get("room"), "map_state": "1"})
+                treasure_rooms[0].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+                # Iniciar temporizador para expulsar o jogador após 10 segundos
+                threading.Thread(target=treasure_room_timer, args=(client, 0)).start()
+        else:
+            print(f"{client.get('name')} tentou entrar na sala do tesouro {i + 1}, mas está ocupada.")     
     if x == treasure_rooms[1].get("position")[0] and y == treasure_rooms[1].get("position")[1]:
-        client.update({"map_state" : "2"})
-        client.update({"current_map" : treasure_rooms[1].get("room")})
-        treasure_rooms[1].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2 
-    print("MAP STATE:", client.get("current_map"))
+        acquired = treasure_room_semaphores[1].acquire(blocking=False)
+        if acquired:
+                print(f"{client.get('name')} entrou na sala do tesouro {i + 1}")
+                client.update({"position": [1, 1], "current_map": treasure_rooms[1].get("room"), "map_state": "2"})
+                treasure_rooms[1].get("room")[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+                # Iniciar temporizador para expulsar o jogador após 10 segundos
+                threading.Thread(target=treasure_room_timer, args=(client, 1)).start()
+        else:
+            print(f"{client.get('name')} tentou entrar em uma sala do tesouro, mas está ocupada.")    
+    print("Client current map: ", client.get("map_state"))
+    
+# Função de temporizador para saída automática
+def treasure_room_timer(client, room_index):
+    # Dormir por 10 segundos
+    time.sleep(10)
+    # Remover jogador da sala do tesouro
+    treasure_room_semaphores[room_index].release()  # Liberar a sala
+    print(f"{client.get('name')} foi expulso da sala do tesouro {room_index + 1}")
+    treasure_rooms[room_index].get("room")[client.get("position")[0]][client.get("position")[1]] = EMPTY
+    # Retornar o jogador ao mapa principal
+    return_to_main_map(client)
+
+def return_to_main_map(client):
+    if game_main_map[1][1] == EMPTY:
+        client.update({"position": [1, 1], "current_map": game_main_map, "map_state": "main"})
+        game_main_map[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+    elif game_main_map[2][2] == EMPTY or game_main_map[2][2] == TREASURE:
+        if game_main_map[2][2] == EMPTY:
+            game_main_map[2][2] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+        else:
+            game_main_map[2][2] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
+            remaining_treasures -= 1
+            client["score"] += 100 
+            print(f"{client.get("name")} → {client.get("score")} pontos")
+    print(f"{client.get('name')} voltou ao mapa principal.")
 
 # Função que define o vencedor
 def set_winner():

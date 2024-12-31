@@ -4,19 +4,30 @@ import json
 import time
 import os
 from pynput import keyboard
+from threading import Thread
 
 # Constante que armazena o total de pontos
 TOTAL_POINTS = 10600
 
-# Variável que armazena dados do jogador
-player = ""
+player = "" # Variável que armazena dados do jogador
+
+stopwatch_state = False
+
+#Função que inicia e exibe um cronômetro enquanto o jogador está na sala do tesouro
+def start_stopwatch():
+    global stopwatch_state
+    start_time = time.time()
+    while stopwatch_state:
+        elapsed_time = int(time.time() - start_time)
+        print(f"Cronômetro: {elapsed_time}s", end="\r")
+        time.sleep(1)
 
 # Função que renderiza o mapa
-def render_map(game_main_map):
+def render_map(game_map):
     os.system("cls" if os.name == "nt" else "clear")
     
-    for row in game_main_map:
-            print("".join(row))
+    for row in game_map:
+        print("".join(row))
             
 # Função que inicia e trata a conexão socket do cliente
 def start_client():
@@ -65,8 +76,8 @@ def start_client():
             print("Jogo finalizado")
             break
         elif message:
-            game_main_map = json.loads(message)
-            render_map(game_main_map)
+            game_map = json.loads(message)
+            render_map(game_map)
             time.sleep(0.4)
         else:
             continue
