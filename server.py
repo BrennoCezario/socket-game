@@ -239,6 +239,7 @@ def treasure_room_timer(client, room_index):
     return_to_main_map(client)
 
 def return_to_main_map(client):
+    global remaining_treasures
     if game_main_map[1][1] == EMPTY:
         client.update({"position": [1, 1], "current_map": game_main_map, "map_state": "main"})
         game_main_map[1][1] = PLAYER_1 if client.get("id") == 1 else PLAYER_2
@@ -335,7 +336,7 @@ def start_server():
             for client in clients:
                 client.get("connection").send("GAME_OVER".encode())
             break
-        time.sleep(0.5)
+        time.sleep(0.6)
         
     # Envia a mensagem de fim de jogo
     print("Jogo finalizado")

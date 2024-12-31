@@ -12,15 +12,15 @@ TOTAL_POINTS = 10600
 player = "" # Variável que armazena dados do jogador
 
 stopwatch_state = False
+stopwatch = 10
 
 #Função que inicia e exibe um cronômetro enquanto o jogador está na sala do tesouro
 def start_stopwatch():
-    global stopwatch_state
-    start_time = time.time()
-    while stopwatch_state:
-        elapsed_time = int(time.time() - start_time)
-        print(f"Cronômetro: {elapsed_time}s", end="\r")
+    global stopwatch_state, stopwatch
+    while stopwatch > 0:
+        stopwatch -= 1
         time.sleep(1)
+    stopwatch_state = False
 
 # Função que renderiza o mapa
 def render_map(game_map):
@@ -28,7 +28,15 @@ def render_map(game_map):
     
     for row in game_map:
         print("".join(row))
-            
+    
+    global stopwatch_state, stopwatch
+    if len(game_map) == 8:
+        if stopwatch_state == False:
+            stopwatch_state = True
+            stopwatch_thread = Thread (target=start_stopwatch, daemon=True) 
+            stopwatch_thread.start()
+        print(f"Tempo Restante: {stopwatch}s")
+                   
 # Função que inicia e trata a conexão socket do cliente
 def start_client():
     
@@ -78,7 +86,7 @@ def start_client():
         elif message:
             game_map = json.loads(message)
             render_map(game_map)
-            time.sleep(0.4)
+            time.sleep(0.5)
         else:
             continue
     
