@@ -7,12 +7,12 @@ from pynput import keyboard
 from threading import Thread
 
 # Constante que armazena o total de pontos
-TOTAL_POINTS = 10600
+TOTAL_POINTS = 3100
 
 player = "" # Variável que armazena dados do jogador
 
 stopwatch_state = False
-stopwatch = 10
+stopwatch = 11
 
 #Função que inicia e exibe um cronômetro enquanto o jogador está na sala do tesouro
 def start_stopwatch():
@@ -20,6 +20,7 @@ def start_stopwatch():
     while stopwatch > 0:
         stopwatch -= 1
         time.sleep(1)
+    stopwatch = 11
     stopwatch_state = False
 
 # Função que renderiza o mapa
